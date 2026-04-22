@@ -1,0 +1,8 @@
+node_modules/
+web/dist/
+web/node_modules/
+
+wallpaper_*.png
+
+.claude/
+.DS_Store
