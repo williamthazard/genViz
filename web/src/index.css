@@ -3,12 +3,26 @@
 @tailwind utilities;
 
 html, body, #root {
-  height: 100%;
+  height: 100vh;
+  /* dvh tracks the actual visible viewport; falls back to vh on older browsers. */
+  height: 100dvh;
   margin: 0;
+  overflow: hidden;
+  overscroll-behavior: none;
   background: #0a0a0a;
   color: #e5e5e5;
   font-family: ui-sans-serif, system-ui, -apple-system, sans-serif;
   font-synthesis: none;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+}
+
+/* Hide spinner arrows on the seed input so the control looks clean. */
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
 }
