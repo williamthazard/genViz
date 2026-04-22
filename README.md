@@ -14,10 +14,8 @@ There are two ways to use it.
 
 ## 1. Web app (easiest)
 
-Go to the hosted version and click **Regenerate** until you like what you see, then
-**Download**. No install.
-
-> _Link goes here once the repo is pushed and GitHub Pages is enabled._
+Go to **[williamthazard.github.io/genViz](https://williamthazard.github.io/genViz/)**
+and click **Regenerate** until you like what you see, then **Download**. No install.
 
 ## 2. Node CLI
 
