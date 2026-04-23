@@ -1,18 +1,22 @@
 import { BAYER8 } from "./noise.ts";
 import { Rng } from "./rng.ts";
+import { buildPaletteLUT, type Palette } from "./color.ts";
 
-// Bayer-dither quantize + vignette + faint grain. Matches Python _finish().
+// Bayer-dither quantize + vignette + faint grain, then map through the
+// palette LUT. An empty palette yields identity grayscale.
 export function finish(
   rgba: Uint8ClampedArray,
   w: number,
   h: number,
   rng: Rng,
+  palette: Palette = [],
   vignetteStrength = 0.07,
   levels = 24,
 ): void {
   const step = 255 / (levels - 1);
   const halfW = w / 2;
   const halfH = h / 2;
+  const lut = buildPaletteLUT(palette);
 
   for (let y = 0; y < h; y++) {
     const bayerRow = (y & 7) * 8;
@@ -27,7 +31,10 @@ export function finish(
       const r2 = xn * xn + yn * yn;
       const vig = Math.max(0, Math.min(1, 1 - vignetteStrength * r2));
       v = Math.max(0, Math.min(255, v * vig));
-      rgba[i] = rgba[i + 1] = rgba[i + 2] = v;
+      const li = (v | 0) * 3;
+      rgba[i] = lut[li];
+      rgba[i + 1] = lut[li + 1];
+      rgba[i + 2] = lut[li + 2];
       // alpha stays 255
     }
   }

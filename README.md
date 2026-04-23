@@ -32,6 +32,9 @@ cd web && npm install && cd ../js && npm install
 # pick the recipe yourself
 ./genviz.js --desktop --foreground trees --focal moon --seed 42
 
+# tint with one or more colors (default is black & white)
+./genviz.js --mobile --color '#c2b280' --color teal
+
 # custom size
 ./genviz.js --size 3840 2160 --out my-wall.png
 ```
@@ -43,6 +46,9 @@ Flags that take values default to `random` if omitted:
 - `--focal`: `moon`, `seam`, `none`, `random`
 - `--drift`: `birds`, `shards`, `none`, `random`
 - `--seed <number>`: pin the seed for reproducibility
+- `--color <value>`: any CSS color (hex, `rgb()`, name). Repeat to build a
+  palette — each color becomes a midtone stop between the existing black
+  shadows and white highlights. Omit for pure B&W.
 - `--out <path>`: override the auto-generated filename
 
 ## Development

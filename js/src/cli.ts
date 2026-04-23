@@ -14,6 +14,7 @@ import {
   type Drift,
   type PresetName,
 } from "./compose.ts";
+import { parseColor, type Tint } from "./color.ts";
 
 interface Args {
   preset?: PresetName;
@@ -23,6 +24,7 @@ interface Args {
   drift: Drift | "random";
   seed?: number;
   out?: string;
+  colors: string[];
 }
 
 function die(msg: string): never {
@@ -31,7 +33,7 @@ function die(msg: string): never {
 }
 
 function parseArgs(argv: string[]): Args {
-  const args: Args = { foreground: "random", focal: "random", drift: "random" };
+  const args: Args = { foreground: "random", focal: "random", drift: "random", colors: [] };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a.startsWith("--") && (PRESETS as Record<string, unknown>)[a.slice(2)]) {
@@ -58,6 +60,10 @@ function parseArgs(argv: string[]): Args {
       args.seed = Number(argv[++i]);
     } else if (a === "--out") {
       args.out = argv[++i];
+    } else if (a === "--color") {
+      const v = argv[++i];
+      if (!v) die("--color expects a value");
+      args.colors.push(v);
     } else if (a === "-h" || a === "--help") {
       printHelp();
       process.exit(0);
@@ -69,12 +75,14 @@ function parseArgs(argv: string[]): Args {
 }
 
 function printHelp() {
-  console.log(`Usage: genviz [--desktop|--mobile|...] [--size W H] [--foreground X] [--focal X] [--drift X] [--seed N] [--out path]
+  console.log(`Usage: genviz [--desktop|--mobile|...] [--size W H] [--foreground X] [--focal X] [--drift X] [--seed N] [--color C ...] [--out path]
 
 Presets:    ${Object.keys(PRESETS).join(", ")}
 Foreground: ${FOREGROUNDS.join(", ")}, random
 Focal:      ${FOCALS.join(", ")}, random
-Drift:      ${DRIFTS.join(", ")}, random`);
+Drift:      ${DRIFTS.join(", ")}, random
+Color:      any CSS color (hex, rgb(), name); pass --color multiple times to
+            build a palette. Default palette is empty (black & white).`);
 }
 
 function main() {
@@ -102,7 +110,11 @@ function main() {
 
   const canvas = createCanvas(w, h);
   const ctx = canvas.getContext("2d") as unknown as CanvasRenderingContext2D;
-  compose(ctx, w, h, rng, foreground, focal, drift);
+  const palette: Tint[] = args.colors.map(c => {
+    try { return parseColor(c, ctx); }
+    catch { die(`bad --color: ${c}`); }
+  });
+  compose(ctx, w, h, rng, foreground, focal, drift, palette);
   const buf = canvas.toBuffer("image/png");
   writeFileSync(out, buf);
   const kb = statSync(out).size / 1024;

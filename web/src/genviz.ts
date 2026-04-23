@@ -11,9 +11,26 @@ import {
   type Drift,
   type PresetName,
 } from "@core/compose.ts";
+import {
+  parseColor,
+  tintToHex,
+  type Tint,
+  type Palette,
+} from "@core/color.ts";
 
-export { Rng, randomSeed, compose, resolveRecipe, FOREGROUNDS, FOCALS, DRIFTS, PRESETS };
-export type { Foreground, Focal, Drift, PresetName };
+export {
+  Rng,
+  randomSeed,
+  compose,
+  resolveRecipe,
+  FOREGROUNDS,
+  FOCALS,
+  DRIFTS,
+  PRESETS,
+  parseColor,
+  tintToHex,
+};
+export type { Foreground, Focal, Drift, PresetName, Tint, Palette };
 
 // Render into an existing canvas. Resizes it if needed, then composes.
 export function render(
@@ -24,11 +41,12 @@ export function render(
   foreground: Foreground,
   focal: Focal,
   drift: Drift,
+  palette: Palette = [],
 ): void {
   if (canvas.width !== width) canvas.width = width;
   if (canvas.height !== height) canvas.height = height;
   const ctx = canvas.getContext("2d");
   if (!ctx) throw new Error("2D context unavailable");
   const rng = new Rng(seed);
-  compose(ctx, width, height, rng, foreground, focal, drift);
+  compose(ctx, width, height, rng, foreground, focal, drift, palette);
 }

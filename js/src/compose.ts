@@ -12,6 +12,7 @@ import {
   type Ctx2D,
 } from "./painters.ts";
 import { finish } from "./finish.ts";
+import type { Palette } from "./color.ts";
 
 export const FOREGROUNDS = ["spikes", "trees", "ruins", "mountains"] as const;
 export const FOCALS = ["moon", "seam", "none"] as const;
@@ -47,6 +48,7 @@ export function compose(
   foreground: Foreground,
   focal: Focal,
   drift: Drift,
+  palette: Palette = [],
 ): void {
   const minDim = Math.min(width, height);
   const horizonY = height * rng.uniform(0.62, 0.78);
@@ -113,7 +115,7 @@ export function compose(
   else if (drift === "birds") paintBirds(ctx, rng, width, height, horizonY, minDim);
 
   const final = ctx.getImageData(0, 0, width, height);
-  finish(final.data, width, height, rng);
+  finish(final.data, width, height, rng, palette);
   ctx.putImageData(final, 0, 0);
 }
 

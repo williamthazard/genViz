@@ -1,8 +1,10 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   render,
   randomSeed,
   resolveRecipe,
+  parseColor,
+  tintToHex,
   FOREGROUNDS,
   FOCALS,
   DRIFTS,
@@ -12,6 +14,7 @@ import {
   type Focal,
   type Drift,
   type PresetName,
+  type Tint,
 } from "./genviz";
 import { Shadowbox } from "./Shadowbox";
 
@@ -53,17 +56,145 @@ function Select<T extends string>({
   );
 }
 
+function PaletteEditor({
+  palette,
+  setPalette,
+  parse,
+}: {
+  palette: string[];
+  setPalette: (p: string[]) => void;
+  parse: (s: string) => Tint | null;
+}) {
+  const [text, setText] = useState("");
+  const [error, setError] = useState(false);
+
+  const tryAdd = (s: string) => {
+    const t = parse(s);
+    if (!t) { setError(true); return; }
+    setPalette([...palette, tintToHex(t)]);
+    setText("");
+    setError(false);
+  };
+
+  const replaceAt = (i: number, value: string) => {
+    const next = [...palette];
+    next[i] = value;
+    setPalette(next);
+  };
+
+  const removeAt = (i: number) => {
+    setPalette(palette.filter((_, j) => j !== i));
+  };
+
+  return (
+    <div className="flex flex-col gap-2">
+      <div className="flex flex-wrap gap-1.5 items-center">
+        {palette.map((c, i) => {
+          const t = parse(c);
+          const hex = t ? tintToHex(t) : "#000000";
+          return (
+            <div key={i} className="relative">
+              <label
+                className="block w-7 h-7 rounded border border-neutral-700 cursor-pointer"
+                style={{ backgroundColor: hex }}
+                title={c}
+              >
+                <input
+                  type="color"
+                  value={hex}
+                  onChange={e => replaceAt(i, e.target.value)}
+                  className="sr-only"
+                  aria-label={`edit color ${i + 1}`}
+                />
+              </label>
+              <button
+                type="button"
+                onClick={() => removeAt(i)}
+                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center"
+                aria-label={`remove color ${i + 1}`}
+              >
+                <span className="text-[10px] leading-none">×</span>
+              </button>
+            </div>
+          );
+        })}
+        <label
+          className="w-7 h-7 rounded border border-dashed border-neutral-700 hover:border-neutral-500 flex items-center justify-center cursor-pointer text-neutral-500 hover:text-neutral-300 transition-colors"
+          title="add color"
+        >
+          <span className="text-base leading-none">+</span>
+          <input
+            type="color"
+            onChange={e => {
+              setPalette([...palette, e.target.value]);
+            }}
+            className="sr-only"
+            aria-label="add color"
+          />
+        </label>
+      </div>
+      <div className="flex gap-1.5">
+        <input
+          type="text"
+          placeholder="hex or name"
+          value={text}
+          onChange={e => { setText(e.target.value); setError(false); }}
+          onKeyDown={e => {
+            if (e.key === "Enter") { e.preventDefault(); tryAdd(text); }
+          }}
+          className={`flex-1 bg-neutral-900 border ${error ? "border-red-800" : "border-neutral-800"} rounded px-2 py-1 text-xs text-neutral-100 focus:outline-none focus:border-neutral-600 transition-colors`}
+          aria-label="add color by name or hex"
+        />
+        <button
+          type="button"
+          onClick={() => tryAdd(text)}
+          disabled={!text}
+          className="px-2.5 py-1 border border-neutral-700 rounded text-xs text-neutral-200 hover:bg-neutral-900 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          Add
+        </button>
+      </div>
+    </div>
+  );
+}
+
 export default function App() {
   const [preset, setPreset] = useState<PresetName>("mobile");
   const [foreground, setForeground] = useState<Choice<Foreground>>("random");
   const [focal, setFocal] = useState<Choice<Focal>>("random");
   const [drift, setDrift] = useState<Choice<Drift>>("random");
   const [seed, setSeed] = useState<number>(() => randomSeed());
+  const [palette, setPalette] = useState<string[]>([]);
   const [recipe, setRecipe] = useState<string>("");
   const [rendering, setRendering] = useState(false);
   const [shadowboxSrc, setShadowboxSrc] = useState<string | null>(null);
+  const [showAdvanced, setShowAdvanced] = useState(false);
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+
+  // Throwaway 1x1 ctx dedicated to CSS color parsing (reused across renders).
+  const parseCtx = useMemo(() => {
+    const c = document.createElement("canvas");
+    return c.getContext("2d");
+  }, []);
+
+  const parse = (s: string): Tint | null => {
+    if (!parseCtx || !s.trim()) return null;
+    try { return parseColor(s, parseCtx); }
+    catch { return null; }
+  };
+
+  // Parsed palette — any entries that fail to parse are silently skipped.
+  const resolvedPalette = useMemo<Tint[]>(() => {
+    if (!parseCtx) return [];
+    const out: Tint[] = [];
+    for (const c of palette) {
+      if (!c.trim()) continue;
+      try { out.push(parseColor(c, parseCtx)); }
+      catch { /* skip */ }
+    }
+    return out;
+  }, [palette, parseCtx]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -73,12 +204,12 @@ export default function App() {
       const [w, h] = PRESETS[preset];
       const resolvedRng = new Rng(seed);
       const resolved = resolveRecipe(resolvedRng, foreground, focal, drift);
-      render(canvas, w, h, seed, resolved.foreground, resolved.focal, resolved.drift);
+      render(canvas, w, h, seed, resolved.foreground, resolved.focal, resolved.drift, resolvedPalette);
       setRecipe(`${resolved.foreground}-${resolved.focal}-${resolved.drift}`);
       setRendering(false);
     });
     return () => cancelAnimationFrame(raf);
-  }, [preset, foreground, focal, drift, seed]);
+  }, [preset, foreground, focal, drift, seed, resolvedPalette]);
 
   const regenerate = () => setSeed(randomSeed());
 
@@ -113,17 +244,20 @@ export default function App() {
   };
 
   return (
-    <div className="h-full flex flex-col sm:flex-row bg-neutral-950 text-neutral-200">
-      <aside className="shrink-0 flex flex-col border-b border-neutral-800 sm:border-b-0 sm:border-r sm:w-72 sm:h-full overflow-y-auto">
-        <div className="px-5 py-4 flex items-baseline justify-between border-b border-neutral-900">
+    <div className="h-full flex flex-col-reverse sm:flex-row bg-neutral-950 text-neutral-200">
+      <aside className="shrink-0 flex flex-col border-t border-neutral-800 sm:border-t-0 sm:border-r sm:w-72 sm:h-full sm:overflow-y-auto">
+        <div className="hidden sm:flex px-5 py-4 items-baseline justify-between border-b border-neutral-900">
           <h1 className="text-neutral-100 font-medium tracking-tight text-base">genviz</h1>
           <span className="text-[10px] uppercase tracking-wider text-neutral-600">
             wallpapers
           </span>
         </div>
 
-        <div className="p-5 flex flex-col gap-4 sm:flex-1">
-          <div className="grid grid-cols-2 sm:grid-cols-1 gap-3">
+        {/* Recipe controls — always visible on desktop; hidden on mobile behind ▸ toggle. */}
+        <div
+          className={`${showAdvanced ? "flex" : "hidden"} sm:flex flex-col gap-3 sm:gap-4 px-3 pt-3 sm:p-5 sm:flex-1`}
+        >
+          <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
             <Field label="size">
               <Select value={preset} options={PRESET_NAMES} onChange={setPreset} />
             </Field>
@@ -160,7 +294,14 @@ export default function App() {
           </Field>
         </div>
 
-        <div className="p-5 border-t border-neutral-900 flex flex-col gap-2">
+        {/* Palette — visible on both mobile and desktop. */}
+        <div className="px-3 py-3 sm:px-5 sm:py-4 sm:border-t sm:border-neutral-900">
+          <Field label="palette">
+            <PaletteEditor palette={palette} setPalette={setPalette} parse={parse} />
+          </Field>
+        </div>
+
+        <div className="p-3 sm:p-5 sm:border-t sm:border-neutral-900 flex flex-col gap-2">
           <div className="flex gap-2">
             <button
               onClick={regenerate}
@@ -176,9 +317,18 @@ export default function App() {
             >
               Download
             </button>
+            <button
+              type="button"
+              onClick={() => setShowAdvanced(v => !v)}
+              className="sm:hidden shrink-0 px-3 py-2 border border-neutral-700 text-neutral-300 rounded text-sm hover:bg-neutral-900 transition-colors"
+              aria-expanded={showAdvanced}
+              aria-label="toggle recipe options"
+            >
+              {showAdvanced ? "▾" : "▸"}
+            </button>
           </div>
           {recipe && (
-            <div className="text-[11px] text-neutral-600 font-mono leading-relaxed pt-1">
+            <div className="hidden sm:block text-[11px] text-neutral-600 font-mono leading-relaxed pt-1">
               <div className="truncate">recipe · {recipe}</div>
               <div className="truncate">seed · {seed}</div>
             </div>
@@ -186,7 +336,7 @@ export default function App() {
         </div>
       </aside>
 
-      <main className="flex-1 min-w-0 min-h-0 p-4 sm:p-6 flex items-center justify-center overflow-hidden">
+      <main className="flex-1 min-w-0 min-h-0 p-3 sm:p-6 flex items-center justify-center overflow-hidden">
         <div
           className="relative max-w-full max-h-full cursor-zoom-in"
           onClick={openShadowbox}
