@@ -1,13 +1,13 @@
 {
-  "name": "genviz",
+  "name": "genscape",
   "version": "0.1.0",
   "private": true,
   "type": "module",
   "bin": {
-    "genviz": "./src/cli.ts"
+    "genscape": "./src/cli.ts"
   },
   "scripts": {
-    "genviz": "tsx src/cli.ts"
+    "genscape": "tsx src/cli.ts"
   },
   "dependencies": {
     "@napi-rs/canvas": "^0.1.58"

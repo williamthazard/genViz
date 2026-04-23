@@ -1,4 +1,4 @@
-# How to build genviz
+# How to build genscape
 
 Hello. This is a hands-on tutorial that builds the wallpaper generator in
 this repo from an empty directory up to a site on the internet. Every line
@@ -42,7 +42,7 @@ when they matter.
 
 When you see a block like this:
 
-> **Try it.** `./genviz.js` should write a PNG.
+> **Try it.** `./genscape.js` should write a PNG.
 
 ...actually try it. Fix what breaks before moving on. Debugging your own
 typo is worth more than a clean pass.

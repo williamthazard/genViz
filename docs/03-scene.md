@@ -328,7 +328,7 @@ main();
 The CLI now knows nothing about rendering — it just plumbs args, creates
 a canvas, calls `compose(ctx, …)`, and writes the PNG.
 
-> **Try it.** `./genviz.js --mobile`. You should get a dark image with a
+> **Try it.** `./genscape.js --mobile`. You should get a dark image with a
 > soft horizon, a dim moon somewhere in the upper half, and a scatter of
 > stars. No silhouette yet — that's next chapter — but already it reads
 > as *night*.

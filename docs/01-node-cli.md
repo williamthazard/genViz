@@ -1,6 +1,6 @@
 # 1. A Node CLI that prints a PNG
 
-Goal of this chapter: an executable script you can type `./genviz.js --desktop`
+Goal of this chapter: an executable script you can type `./genscape.js --desktop`
 at and get a PNG file. The PNG will be boring — TV static — but every pipe in
 the build will be connected.
 
@@ -28,7 +28,7 @@ nvm install --lts
 ## Make the project
 
 ```sh
-mkdir genviz && cd genviz
+mkdir genscape && cd genscape
 mkdir js && cd js
 npm init -y
 npm install @napi-rs/canvas
@@ -161,7 +161,7 @@ interface Args {
 }
 
 function die(msg: string): never {
-  console.error(`genviz: ${msg}`);
+  console.error(`genscape: ${msg}`);
   process.exit(2);
 }
 
@@ -261,8 +261,8 @@ The `#!/usr/bin/env -S npx tsx` shebang at the top of `cli.ts` is clever but
 fragile — it requires `tsx` to be on PATH, and the nvm-installed Node may
 not be on PATH in every context (cron jobs, GUI launchers).
 
-A more robust wrapper lives at the repo root. Create `/genviz.js` (yes, even
-though it's TypeScript underneath — users want to type `./genviz.js`):
+A more robust wrapper lives at the repo root. Create `/genscape.js` (yes, even
+though it's TypeScript underneath — users want to type `./genscape.js`):
 
 ```sh
 #!/bin/zsh
@@ -275,7 +275,7 @@ exec npx --prefix "$(dirname "$0")/js" tsx "$(dirname "$0")/js/src/cli.ts" "$@"
 Make it executable:
 
 ```sh
-chmod +x genviz.js
+chmod +x genscape.js
 ```
 
 This wrapper sources nvm's init script (so `npx` and `node` resolve
@@ -283,7 +283,7 @@ correctly no matter how the shell was launched), then `exec`s `tsx` pointed
 at our TypeScript entry. `--prefix` tells npx to look for `tsx` in the
 local `js/node_modules` we installed above.
 
-> **Try it.** `./genviz.js --desktop` should write `wallpaper_desktop_<seed>.png`
+> **Try it.** `./genscape.js --desktop` should write `wallpaper_desktop_<seed>.png`
 > in the current directory. Open it. It'll be TV static, but it's a 2560×1440
 > PNG — all the pipes connect. That's enough for one chapter.
 

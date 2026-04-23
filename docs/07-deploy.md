@@ -31,7 +31,7 @@ Cost: $0. Latency: a CDN away. Ops burden: none.
       Deploy to Pages
             │
             ▼
-   https://you.github.io/genViz/
+   https://you.github.io/genscape/
 ```
 
 Two jobs, one workflow.
@@ -119,8 +119,8 @@ handles the actual upload-to-Pages step.
 Two one-time things in GitHub's UI:
 
 1. **Create the repo.** If you haven't already, `git init`, commit, and
-   push to `https://github.com/YOU/genViz`. If the repo name isn't
-   `genViz`, update `base: '/genViz/'` in `vite.config.ts` to match.
+   push to `https://github.com/YOU/genscape`. If the repo name isn't
+   `genscape`, update `base: '/genscape/'` in `vite.config.ts` to match.
 2. **Enable Pages with Actions source.** In the repo settings → Pages →
    Source, choose "GitHub Actions." That's it. Don't pick a branch —
    the workflow uploads directly.
@@ -132,7 +132,7 @@ the build run (~30 seconds for the install step, a second or two for the
 build itself). Then the deploy step finishes and gives you a URL:
 
 ```
-https://YOUR-USERNAME.github.io/genViz/
+https://YOUR-USERNAME.github.io/genscape/
 ```
 
 Open it. You should see the app, same as `npm run dev` showed you
@@ -140,17 +140,17 @@ locally.
 
 > **If it 404s:** check the `base` in `vite.config.ts` matches your repo
 > name exactly (case-sensitive). A mismatch between `base` and the URL
-> prefix is the #1 GH Pages gotcha. If your repo is `my-genviz`, then
-> `base: '/my-genviz/'`.
+> prefix is the #1 GH Pages gotcha. If your repo is `my-genscape`, then
+> `base: '/my-genscape/'`.
 
 ## Custom domain (optional)
 
 If you have a domain name and want to use it:
 
-1. Add a CNAME record: `genviz.yourdomain.com` → `YOU.github.io`.
+1. Add a CNAME record: `genscape.yourdomain.com` → `YOU.github.io`.
 2. In the repo settings → Pages → Custom domain, enter the domain. GitHub
    writes a `CNAME` file to the Pages site.
-3. Change `base: '/genViz/'` to `base: '/'` in `vite.config.ts`, because
+3. Change `base: '/genscape/'` to `base: '/'` in `vite.config.ts`, because
    at a custom domain you're serving from the root.
 
 ## A note on iteration speed

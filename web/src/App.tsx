@@ -15,7 +15,7 @@ import {
   type Drift,
   type PresetName,
   type Tint,
-} from "./genviz";
+} from "./genscape";
 import { Shadowbox } from "./Shadowbox";
 
 type Choice<T extends string> = T | "random";
@@ -68,10 +68,19 @@ function PaletteEditor({
   const [text, setText] = useState("");
   const [error, setError] = useState(false);
 
+  // Accepts a single color or a comma-separated list (hex and/or names mixed
+  // freely, e.g. "red, #112233, teal"). All-or-nothing: a single bad entry
+  // rejects the whole input.
   const tryAdd = (s: string) => {
-    const t = parse(s);
-    if (!t) { setError(true); return; }
-    setPalette([...palette, tintToHex(t)]);
+    const parts = s.split(/[,\n]/).map(p => p.trim()).filter(Boolean);
+    if (parts.length === 0) { setError(true); return; }
+    const added: string[] = [];
+    for (const p of parts) {
+      const t = parse(p);
+      if (!t) { setError(true); return; }
+      added.push(tintToHex(t));
+    }
+    setPalette([...palette, ...added]);
     setText("");
     setError(false);
   };
@@ -93,27 +102,34 @@ function PaletteEditor({
           const t = parse(c);
           const hex = t ? tintToHex(t) : "#000000";
           return (
-            <div key={i} className="relative">
+            <div key={i} className="relative w-7 h-7">
               <label
-                className="block w-7 h-7 rounded border border-neutral-700 cursor-pointer"
+                className="absolute inset-0 block rounded border border-neutral-700 cursor-pointer overflow-hidden"
                 style={{ backgroundColor: hex }}
                 title={c}
               >
+                {/* opacity-0 full-size input (not sr-only) so iOS/Android
+                    anchor and close the native picker to the swatch's rect. */}
                 <input
                   type="color"
                   value={hex}
                   onChange={e => replaceAt(i, e.target.value)}
-                  className="sr-only"
+                  className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                   aria-label={`edit color ${i + 1}`}
                 />
               </label>
               <button
                 type="button"
-                onClick={() => removeAt(i)}
-                className="absolute -top-1.5 -right-1.5 w-4 h-4 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-400 hover:text-white flex items-center justify-center"
+                onPointerDown={e => e.stopPropagation()}
+                onClick={e => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  removeAt(i);
+                }}
+                className="absolute -top-1.5 -right-1.5 w-5 h-5 rounded-full bg-neutral-900 border border-neutral-700 text-neutral-300 hover:text-white flex items-center justify-center z-10 shadow"
                 aria-label={`remove color ${i + 1}`}
               >
-                <span className="text-[10px] leading-none">×</span>
+                <span className="text-xs leading-none">×</span>
               </button>
             </div>
           );
@@ -136,7 +152,7 @@ function PaletteEditor({
       <div className="flex gap-1.5">
         <input
           type="text"
-          placeholder="hex or name"
+          placeholder="hex or name (commas for multiple)"
           value={text}
           onChange={e => { setText(e.target.value); setError(false); }}
           onKeyDown={e => {
@@ -164,11 +180,14 @@ export default function App() {
   const [focal, setFocal] = useState<Choice<Focal>>("random");
   const [drift, setDrift] = useState<Choice<Drift>>("random");
   const [seed, setSeed] = useState<number>(() => randomSeed());
-  const [palette, setPalette] = useState<string[]>([]);
+  const [palette, setPalette] = useState<string[]>(["#000000", "#ffffff"]);
   const [recipe, setRecipe] = useState<string>("");
   const [rendering, setRendering] = useState(false);
   const [shadowboxSrc, setShadowboxSrc] = useState<string | null>(null);
-  const [showAdvanced, setShowAdvanced] = useState(false);
+  // Default to open on desktop (≥640px), collapsed on mobile.
+  const [showAdvanced, setShowAdvanced] = useState(() =>
+    typeof window !== "undefined" && window.innerWidth >= 640
+  );
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
 
@@ -247,15 +266,15 @@ export default function App() {
     <div className="h-full flex flex-col-reverse sm:flex-row bg-neutral-950 text-neutral-200">
       <aside className="shrink-0 flex flex-col border-t border-neutral-800 sm:border-t-0 sm:border-r sm:w-72 sm:h-full sm:overflow-y-auto">
         <div className="hidden sm:flex px-5 py-4 items-baseline justify-between border-b border-neutral-900">
-          <h1 className="text-neutral-100 font-medium tracking-tight text-base">genviz</h1>
+          <h1 className="text-neutral-100 font-medium tracking-tight text-base">genscape</h1>
           <span className="text-[10px] uppercase tracking-wider text-neutral-600">
             wallpapers
           </span>
         </div>
 
-        {/* Recipe controls — always visible on desktop; hidden on mobile behind ▸ toggle. */}
+        {/* Recipe controls — collapsible at any viewport. */}
         <div
-          className={`${showAdvanced ? "flex" : "hidden"} sm:flex flex-col gap-3 sm:gap-4 px-3 pt-3 sm:p-5 sm:flex-1`}
+          className={`${showAdvanced ? "flex" : "hidden"} flex-col gap-3 sm:gap-4 px-3 pt-3 sm:p-5 sm:flex-1`}
         >
           <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
             <Field label="size">
@@ -320,9 +339,10 @@ export default function App() {
             <button
               type="button"
               onClick={() => setShowAdvanced(v => !v)}
-              className="sm:hidden shrink-0 px-3 py-2 border border-neutral-700 text-neutral-300 rounded text-sm hover:bg-neutral-900 transition-colors"
+              className="shrink-0 px-3 py-2 border border-neutral-700 text-neutral-300 rounded text-sm hover:bg-neutral-900 transition-colors"
               aria-expanded={showAdvanced}
-              aria-label="toggle recipe options"
+              aria-label={showAdvanced ? "hide recipe options" : "show recipe options"}
+              title={showAdvanced ? "hide options" : "show options"}
             >
               {showAdvanced ? "▾" : "▸"}
             </button>

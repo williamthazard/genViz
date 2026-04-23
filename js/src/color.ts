@@ -34,15 +34,18 @@ export function tintToHex(tint: Tint): string {
   return "#" + tint.map(c => Math.max(0, Math.min(255, Math.round(c))).toString(16).padStart(2, "0")).join("");
 }
 
-// Build a 256-entry RGB lookup table that maps a grayscale value v ∈ [0,255]
-// to the output color. An empty palette yields identity grayscale. Non-empty
-// palettes are anchored at black (dark pixels) and white (bright pixels) with
-// the user's colors as intermediate stops — preserving composition (moons
-// stay bright, silhouettes stay dark) while recoloring midtones.
+// Build a 256-entry RGB lookup table that maps grayscale v ∈ [0,255] to the
+// output color. The palette is a literal list of stops — dark pixels take the
+// first stop, bright pixels take the last, with linear interpolation between.
+// Callers who want the classic "shadows→black, highlights→white" behavior
+// include BLACK and WHITE as explicit stops. An empty palette is treated as
+// identity grayscale (i.e. [BLACK, WHITE]); a single stop produces a solid
+// image of that color.
 export function buildPaletteLUT(palette: Palette): Uint8ClampedArray {
-  const stops: Tint[] = palette.length === 0
-    ? [BLACK, WHITE]
-    : [BLACK, ...palette, WHITE];
+  const stops: Tint[] =
+    palette.length === 0 ? [BLACK, WHITE]
+    : palette.length === 1 ? [palette[0], palette[0]]
+    : [...palette];
   const lut = new Uint8ClampedArray(256 * 3);
   const segments = stops.length - 1;
   for (let v = 0; v < 256; v++) {

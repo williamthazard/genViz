@@ -6,14 +6,17 @@ Vague output looks like a screensaver. Specific output looks like something.
 
 ## What we're building
 
-A program that generates black-and-white wallpapers. Each one is a scene: a
-dim sky over a darker horizon, usually a silhouette of *something* — trees,
-ruins, mountains — and sometimes a moon, sometimes birds. A restrained
-composition with a focal element your eye can land on.
+A program that generates wallpapers. Each one is a scene: a dim sky over a
+darker horizon, usually a silhouette of *something* — trees, ruins, mountains
+— and sometimes a moon, sometimes birds. A restrained composition with a
+focal element your eye can land on. The renderer is grayscale at its core;
+the last step maps those values through an optional palette, so the same
+scene can come out as stark black-and-white or washed in any color scheme
+you pick.
 
 Two interfaces share one rendering algorithm:
 
-- a Node CLI (`./genviz.js --mobile`)
+- a Node CLI (`./genscape.js --mobile`)
 - a browser app (dropdowns, preview, download)
 
 Same pictures. Different front doors.
@@ -44,7 +47,9 @@ keeps the output from looking like a screensaver.
 
 ## What we're *not* building
 
-- Color. Grayscale only. Limiting the palette forces the composition to work.
+- Freeform color throughout the pipeline. Everything renders in grayscale; a
+  palette is applied only at the very end as a tonemap. Separating tone from
+  color keeps composition working no matter what palette you pick.
 - Animation. These are single frames.
 - Photorealism. We want suggestion, not simulation.
 - AI. No models. This is plain math: noise functions, Gaussian falloffs,

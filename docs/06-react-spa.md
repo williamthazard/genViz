@@ -66,7 +66,7 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import path from 'node:path'
 
-const base = process.env.VITE_BASE ?? '/genViz/'
+const base = process.env.VITE_BASE ?? '/genscape/'
 
 export default defineConfig({
   base,
@@ -84,10 +84,10 @@ export default defineConfig({
 })
 ```
 
-**`base: '/genViz/'`** is the URL prefix. On GitHub Pages, user sites are
+**`base: '/genscape/'`** is the URL prefix. On GitHub Pages, user sites are
 served from `https://<user>.github.io/<repo>/`, so built assets need to
-reference themselves with the `/genViz/` prefix. Locally it doesn't matter
-(Vite dev server serves at `/genViz/` too).
+reference themselves with the `/genscape/` prefix. Locally it doesn't matter
+(Vite dev server serves at `/genscape/` too).
 
 **`alias @core`** lets us write `import ... from "@core/rng.ts"` in
 `web/src/*.tsx` and have Vite resolve it to the shared core in `js/src/`.
@@ -117,7 +117,7 @@ type-checking when included in the browser build.
 
 ## A thin adapter for the browser
 
-Create `web/src/genviz.ts` — it re-exports the core and adds one browser-
+Create `web/src/genscape.ts` — it re-exports the core and adds one browser-
 specific helper:
 
 ```typescript
@@ -243,7 +243,7 @@ programmatically, and clean up. This is the standard pattern for
 
 ```tsx
 <header className="border-b border-neutral-800 px-6 py-3 flex flex-wrap items-center gap-4">
-  <h1 className="text-neutral-100 font-medium tracking-tight mr-4">genviz</h1>
+  <h1 className="text-neutral-100 font-medium tracking-tight mr-4">genscape</h1>
   <Select label="size" value={preset} options={PRESET_NAMES} onChange={setPreset} />
   <Select label="foreground" value={foreground} options={[...]} onChange={setForeground} />
   <Select label="focal" value={focal} options={[...]} onChange={setFocal} />
@@ -372,7 +372,7 @@ to fit.
 
 ```sh
 cd web
-npm run dev    # local dev at http://localhost:5173/genViz/
+npm run dev    # local dev at http://localhost:5173/genscape/
 npm run build  # produces web/dist/
 ```
 

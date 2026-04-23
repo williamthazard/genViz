@@ -28,7 +28,7 @@ interface Args {
 }
 
 function die(msg: string): never {
-  console.error(`genviz: ${msg}`);
+  console.error(`genscape: ${msg}`);
   process.exit(2);
 }
 
@@ -75,7 +75,7 @@ function parseArgs(argv: string[]): Args {
 }
 
 function printHelp() {
-  console.log(`Usage: genviz [--desktop|--mobile|...] [--size W H] [--foreground X] [--focal X] [--drift X] [--seed N] [--color C ...] [--out path]
+  console.log(`Usage: genscape [--desktop|--mobile|...] [--size W H] [--foreground X] [--focal X] [--drift X] [--seed N] [--color C ...] [--out path]
 
 Presets:    ${Object.keys(PRESETS).join(", ")}
 Foreground: ${FOREGROUNDS.join(", ")}, random

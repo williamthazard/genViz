@@ -326,7 +326,7 @@ foreground to the union, TS will warn that `switch` misses it).
 
 ## Handling "random" in the CLI
 
-We want `./genviz.js` to pick randomly by default, so we need a
+We want `./genscape.js` to pick randomly by default, so we need a
 `"random"` sentinel that the top-level driver resolves to a concrete
 choice before calling `compose()`. Add to `compose.ts`:
 
@@ -377,7 +377,7 @@ const { foreground } = resolveRecipe(rng, args.foreground ?? "random");
 compose(ctx, w, h, rng, foreground);
 ```
 
-> **Try it.** `./genviz.js --mobile --foreground trees`. Render a dozen
+> **Try it.** `./genscape.js --mobile --foreground trees`. Render a dozen
 > images. You should see a mix of trees, ruins, spikes, mountains (if you
 > leave `--foreground` off); each one clustered toward a focus; each one
 > sitting on a soft horizon. This is the point in the project where it

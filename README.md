@@ -1,7 +1,8 @@
-# genviz
+# genscape
 
-Generative black-and-white wallpapers. Dark, restrained, compositional — the kind of
-image where your eye finds a scene instead of a pattern.
+Generative wallpapers that feel like scenes, not patterns. Dark, restrained,
+compositional. Default output is black and white; pick a color scheme to wash
+the image in any palette you like.
 
 ![A generated nullscape: a dim moon above a clustered silhouette of trees, birds in flight](docs/images/hero.png)
 
@@ -14,7 +15,7 @@ There are two ways to use it.
 
 ## 1. Web app (easiest)
 
-Go to **[williamthazard.github.io/genViz](https://williamthazard.github.io/genViz/)**
+Go to **[williamthazard.github.io/genscape](https://williamthazard.github.io/genscape/)**
 and click **Regenerate** until you like what you see, then **Download**. No install.
 
 ## 2. Node CLI
@@ -27,16 +28,16 @@ exact resolutions.
 cd web && npm install && cd ../js && npm install
 
 # render a mobile wallpaper to the current directory
-./genviz.js --mobile
+./genscape.js --mobile
 
 # pick the recipe yourself
-./genviz.js --desktop --foreground trees --focal moon --seed 42
+./genscape.js --desktop --foreground trees --focal moon --seed 42
 
 # tint with one or more colors (default is black & white)
-./genviz.js --mobile --color '#c2b280' --color teal
+./genscape.js --mobile --color '#c2b280' --color teal
 
 # custom size
-./genviz.js --size 3840 2160 --out my-wall.png
+./genscape.js --size 3840 2160 --out my-wall.png
 ```
 
 Presets: `desktop`, `desktop-4k`, `desktop-5k`, `mobile`, `mobile-xl`, `square`.
@@ -47,8 +48,9 @@ Flags that take values default to `random` if omitted:
 - `--drift`: `birds`, `shards`, `none`, `random`
 - `--seed <number>`: pin the seed for reproducibility
 - `--color <value>`: any CSS color (hex, `rgb()`, name). Repeat to build a
-  palette — each color becomes a midtone stop between the existing black
-  shadows and white highlights. Omit for pure B&W.
+  palette — dark pixels take the first color, bright pixels take the last,
+  with smooth interpolation between. Include `black` and `white` explicitly
+  if you want them as anchors; omit `--color` entirely for default B&W.
 - `--out <path>`: override the auto-generated filename
 
 ## Development
@@ -67,4 +69,4 @@ cd web && npm run dev
 
 If you want to build this yourself as a learning project — procedural noise,
 Canvas rendering, React, GitHub Pages deploy, all of it — see the tutorial in
-[`docs/`](./docs/). It starts at `mkdir genviz` and ends at a live URL.
+[`docs/`](./docs/). It starts at `mkdir genscape` and ends at a live URL.
