@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 interface Props {
   src: string;
@@ -6,20 +6,43 @@ interface Props {
 }
 
 export function Shadowbox({ src, onClose }: Props) {
+  // zoom = 1 means "fit to viewport". >1 is zoomed in beyond fit.
   const [zoom, setZoom] = useState(1);
   const [pan, setPan] = useState({ x: 0, y: 0 });
+  const [naturalSize, setNaturalSize] = useState<{ w: number; h: number } | null>(null);
+  const containerRef = useRef<HTMLDivElement>(null);
   const dragRef = useRef<{ x: number; y: number; px: number; py: number } | null>(null);
+
+  const onImageLoad = useCallback((e: React.SyntheticEvent<HTMLImageElement>) => {
+    const img = e.currentTarget;
+    setNaturalSize({ w: img.naturalWidth, h: img.naturalHeight });
+  }, []);
+
+  const clampZoom = (z: number) => Math.min(8, Math.max(0.25, z));
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       if (e.key === "Escape") onClose();
-      else if (e.key === "+" || e.key === "=") setZoom(z => Math.min(8, z * 1.25));
-      else if (e.key === "-" || e.key === "_") setZoom(z => Math.max(0.25, z / 1.25));
+      else if (e.key === "+" || e.key === "=") setZoom(z => clampZoom(z * 1.25));
+      else if (e.key === "-" || e.key === "_") setZoom(z => clampZoom(z / 1.25));
       else if (e.key === "0") { setZoom(1); setPan({ x: 0, y: 0 }); }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
+
+  // Wheel-to-zoom
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.1 : 1 / 1.1;
+      setZoom(z => clampZoom(z * factor));
+    };
+    container.addEventListener("wheel", onWheel, { passive: false });
+    return () => container.removeEventListener("wheel", onWheel);
+  }, []);
 
   const onPointerDown = (e: React.PointerEvent) => {
     (e.target as Element).setPointerCapture(e.pointerId);
@@ -35,12 +58,29 @@ export function Shadowbox({ src, onClose }: Props) {
     dragRef.current = null;
   };
 
+  // Compute the fitted display size using the browser's high-quality
+  // resampling (via width/height CSS) rather than CSS transform: scale(),
+  // which uses GPU bilinear filtering and aliases the Bayer dither pattern.
+  const pad = 48;
+  let displayW: number | undefined;
+  let displayH: number | undefined;
+  if (naturalSize) {
+    const maxW = window.innerWidth - pad * 2;
+    const maxH = window.innerHeight - pad * 2;
+    const fitScale = Math.min(maxW / naturalSize.w, maxH / naturalSize.h, 1);
+    displayW = naturalSize.w * fitScale * zoom;
+    displayH = naturalSize.h * fitScale * zoom;
+  }
+
+  const displayPct = Math.round(zoom * 100);
+
   return (
     <div
       className="fixed inset-0 z-50 bg-black/90 flex items-center justify-center select-none"
       onClick={onClose}
     >
       <div
+        ref={containerRef}
         className="w-full h-full overflow-hidden flex items-center justify-center cursor-grab active:cursor-grabbing"
         onClick={e => e.stopPropagation()}
         onPointerDown={onPointerDown}
@@ -52,13 +92,15 @@ export function Shadowbox({ src, onClose }: Props) {
           src={src}
           alt="wallpaper preview"
           draggable={false}
+          onLoad={onImageLoad}
           style={{
-            transform: `translate(${pan.x}px, ${pan.y}px) scale(${zoom})`,
-            transformOrigin: "center center",
-            maxWidth: "none",
-            maxHeight: "none",
+            width: displayW ? `${displayW}px` : undefined,
+            height: displayH ? `${displayH}px` : undefined,
+            transform: `translate(${pan.x}px, ${pan.y}px)`,
+            willChange: "transform",
+            opacity: naturalSize ? 1 : 0,
           }}
-          className="transition-transform duration-75 ease-out will-change-transform"
+          className="transition-opacity duration-150 ease-out"
         />
       </div>
 
@@ -68,16 +110,17 @@ export function Shadowbox({ src, onClose }: Props) {
       >
         <button
           className="w-9 h-9 rounded-full hover:bg-neutral-800 text-neutral-200 text-lg leading-none"
-          onClick={() => setZoom(z => Math.max(0.25, z / 1.25))}
+          onClick={() => setZoom(z => clampZoom(z / 1.25))}
           aria-label="zoom out"
         >−</button>
         <button
           className="w-9 h-9 rounded-full hover:bg-neutral-800 text-neutral-200 text-xs"
           onClick={() => { setZoom(1); setPan({ x: 0, y: 0 }); }}
-        >{Math.round(zoom * 100)}%</button>
+          title="Reset to fit"
+        >{displayPct}%</button>
         <button
           className="w-9 h-9 rounded-full hover:bg-neutral-800 text-neutral-200 text-lg leading-none"
-          onClick={() => setZoom(z => Math.min(8, z * 1.25))}
+          onClick={() => setZoom(z => clampZoom(z * 1.25))}
           aria-label="zoom in"
         >+</button>
       </div>

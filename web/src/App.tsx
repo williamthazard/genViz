@@ -184,12 +184,14 @@ export default function App() {
   const [recipe, setRecipe] = useState<string>("");
   const [rendering, setRendering] = useState(false);
   const [shadowboxSrc, setShadowboxSrc] = useState<string | null>(null);
+  const [previewSrc, setPreviewSrc] = useState<string | null>(null);
   // Default to open on desktop (≥640px), collapsed on mobile.
   const [showAdvanced, setShowAdvanced] = useState(() =>
     typeof window !== "undefined" && window.innerWidth >= 640
   );
 
   const canvasRef = useRef<HTMLCanvasElement>(null);
+  const prevPreviewUrl = useRef<string | null>(null);
 
   // Throwaway 1x1 ctx dedicated to CSS color parsing (reused across renders).
   const parseCtx = useMemo(() => {
@@ -225,6 +227,54 @@ export default function App() {
       const resolved = resolveRecipe(resolvedRng, foreground, focal, drift);
       render(canvas, w, h, seed, resolved.foreground, resolved.focal, resolved.drift, resolvedPalette);
       setRecipe(`${resolved.foreground}-${resolved.focal}-${resolved.drift}`);
+
+      // Create a downsampled preview using progressive halving (mipmap-style).
+      // A single large drawImage can't fully smooth the 8px Bayer dither
+      // pattern; halving repeatedly keeps each step within the interpolation
+      // kernel's reach.
+      const maxPreviewW = window.innerWidth;
+      const maxPreviewH = window.innerHeight;
+      const scale = Math.min(maxPreviewW / w, maxPreviewH / h, 1);
+      const pw = Math.round(w * scale);
+      const ph = Math.round(h * scale);
+
+      // Step down by 2x until the next halving would undershoot the target.
+      let src: HTMLCanvasElement | OffscreenCanvas = canvas;
+      let sw = w;
+      let sh = h;
+      while (sw / 2 >= pw && sh / 2 >= ph) {
+        const hw = Math.round(sw / 2);
+        const hh = Math.round(sh / 2);
+        const tmp = document.createElement("canvas");
+        tmp.width = hw;
+        tmp.height = hh;
+        const tc = tmp.getContext("2d")!;
+        tc.imageSmoothingEnabled = true;
+        tc.imageSmoothingQuality = "high";
+        tc.drawImage(src, 0, 0, hw, hh);
+        src = tmp;
+        sw = hw;
+        sh = hh;
+      }
+
+      // Final scale to exact target size.
+      const previewCanvas = document.createElement("canvas");
+      previewCanvas.width = pw;
+      previewCanvas.height = ph;
+      const pctx = previewCanvas.getContext("2d");
+      if (pctx) {
+        pctx.imageSmoothingEnabled = true;
+        pctx.imageSmoothingQuality = "high";
+        pctx.drawImage(src, 0, 0, pw, ph);
+        previewCanvas.toBlob(blob => {
+          if (!blob) return;
+          if (prevPreviewUrl.current) URL.revokeObjectURL(prevPreviewUrl.current);
+          const url = URL.createObjectURL(blob);
+          prevPreviewUrl.current = url;
+          setPreviewSrc(url);
+        }, "image/png");
+      }
+
       setRendering(false);
     });
     return () => cancelAnimationFrame(raf);
@@ -264,13 +314,15 @@ export default function App() {
 
   return (
     <div className="h-full flex flex-col-reverse sm:flex-row bg-neutral-950 text-neutral-200">
-      <aside className="shrink-0 flex flex-col border-t border-neutral-800 sm:border-t-0 sm:border-r sm:w-72 sm:h-full sm:overflow-y-auto">
-        <div className="hidden sm:flex px-5 py-4 items-baseline justify-between border-b border-neutral-900">
-          <h1 className="text-neutral-100 font-medium tracking-tight text-base">genscape</h1>
-          <span className="text-[10px] uppercase tracking-wider text-neutral-600">
-            wallpapers
-          </span>
-        </div>
+      <aside className={`shrink-0 flex flex-col border-t border-neutral-800 sm:border-t-0 sm:border-r sm:h-full sm:overflow-y-auto transition-[width] duration-200 ease-in-out ${showAdvanced ? "sm:w-72" : "sm:w-auto"}`}>
+        {showAdvanced && (
+          <div className="hidden sm:flex px-5 py-4 items-baseline justify-between border-b border-neutral-900">
+            <h1 className="text-neutral-100 font-medium tracking-tight text-base">genscape</h1>
+            <span className="text-[10px] uppercase tracking-wider text-neutral-600">
+              wallpapers
+            </span>
+          </div>
+        )}
 
         {/* Recipe controls — collapsible at any viewport. */}
         <div
@@ -313,28 +365,30 @@ export default function App() {
           </Field>
         </div>
 
-        {/* Palette — visible on both mobile and desktop. */}
-        <div className="px-3 py-3 sm:px-5 sm:py-4 sm:border-t sm:border-neutral-900">
+        {/* Palette — visible on both mobile and desktop (only when expanded). */}
+        <div className={`px-3 py-3 sm:px-5 sm:py-4 sm:border-t sm:border-neutral-900 ${showAdvanced ? "" : "hidden sm:hidden"}`}>
           <Field label="palette">
             <PaletteEditor palette={palette} setPalette={setPalette} parse={parse} />
           </Field>
         </div>
 
-        <div className="p-3 sm:p-5 sm:border-t sm:border-neutral-900 flex flex-col gap-2">
-          <div className="flex gap-2">
+        <div className={`p-3 sm:border-t sm:border-neutral-900 flex flex-col gap-2 ${showAdvanced ? "sm:p-5" : "sm:p-3"}`}>
+          <div className={`flex gap-2 ${showAdvanced ? "" : "sm:flex-col"}`}>
             <button
               onClick={regenerate}
               disabled={rendering}
               className="flex-1 px-3 py-2 bg-neutral-100 text-neutral-950 rounded text-sm font-medium hover:bg-white disabled:opacity-50 transition-colors"
+              title="Regenerate"
             >
-              {rendering ? "Rendering…" : "Regenerate"}
+              {showAdvanced ? (rendering ? "Rendering…" : "Regenerate") : "↻"}
             </button>
             <button
               onClick={download}
               disabled={rendering}
               className="flex-1 px-3 py-2 border border-neutral-700 text-neutral-200 rounded text-sm hover:bg-neutral-900 disabled:opacity-50 transition-colors"
+              title="Download"
             >
-              Download
+              {showAdvanced ? "Download" : "↓"}
             </button>
             <button
               type="button"
@@ -344,10 +398,10 @@ export default function App() {
               aria-label={showAdvanced ? "hide recipe options" : "show recipe options"}
               title={showAdvanced ? "hide options" : "show options"}
             >
-              {showAdvanced ? "▾" : "▸"}
+              {showAdvanced ? "◂" : "▸"}
             </button>
           </div>
-          {recipe && (
+          {recipe && showAdvanced && (
             <div className="hidden sm:block text-[11px] text-neutral-600 font-mono leading-relaxed pt-1">
               <div className="truncate">recipe · {recipe}</div>
               <div className="truncate">seed · {seed}</div>
@@ -356,15 +410,24 @@ export default function App() {
         </div>
       </aside>
 
+      {/* Hidden canvas used for rendering — never displayed directly. */}
+      <canvas ref={canvasRef} className="hidden" />
+
       <main className="flex-1 min-w-0 min-h-0 p-3 sm:p-6 flex items-center justify-center overflow-hidden">
         <div
-          className="relative max-w-full max-h-full cursor-zoom-in"
+          className="relative cursor-zoom-in"
+          style={{ maxWidth: "100%", maxHeight: "100%" }}
           onClick={openShadowbox}
         >
-          <canvas
-            ref={canvasRef}
-            className="block max-w-full max-h-full object-contain shadow-2xl border border-neutral-900"
-          />
+          {previewSrc && (
+            <img
+              src={previewSrc}
+              alt="wallpaper preview"
+              className="block shadow-2xl border border-neutral-900"
+              style={{ maxWidth: "100%", maxHeight: "calc(100vh - 3rem)", objectFit: "contain", width: "auto", height: "auto" }}
+              draggable={false}
+            />
+          )}
           {rendering && (
             <div className="absolute inset-0 flex items-center justify-center bg-black/40 pointer-events-none text-xs uppercase tracking-wider text-neutral-300">
               rendering…
