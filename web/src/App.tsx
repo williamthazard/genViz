@@ -240,8 +240,8 @@ export default function App() {
 
       // Step down by 2x until the next halving would undershoot the target.
       let src: HTMLCanvasElement | OffscreenCanvas = canvas;
-      let sw = w;
-      let sh = h;
+      let sw: number = w;
+      let sh: number = h;
       while (sw / 2 >= pw && sh / 2 >= ph) {
         const hw = Math.round(sw / 2);
         const hh = Math.round(sh / 2);
@@ -330,24 +330,24 @@ export default function App() {
         >
           <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3">
             <Field label="size">
-              <Select value={preset} options={PRESET_NAMES} onChange={setPreset} />
+              <Select<PresetName> value={preset} options={PRESET_NAMES} onChange={setPreset} />
             </Field>
             <Field label="foreground">
-              <Select
+              <Select<Choice<Foreground>>
                 value={foreground}
                 options={["random", ...FOREGROUNDS] as const}
                 onChange={setForeground}
               />
             </Field>
             <Field label="focal">
-              <Select
+              <Select<Choice<Focal>>
                 value={focal}
                 options={["random", ...FOCALS] as const}
                 onChange={setFocal}
               />
             </Field>
             <Field label="drift">
-              <Select
+              <Select<Choice<Drift>>
                 value={drift}
                 options={["random", ...DRIFTS] as const}
                 onChange={setDrift}
